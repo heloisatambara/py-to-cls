@@ -1,9 +1,9 @@
 class Dog():
-    def __init__(self, name="", breed="undefined"):
+    def __init__(self, name="unnamed", breed="undefined"):
         self.name = name
         self.tricks = []
         self.breed = breed
-        self.happiness = 100
+        self.happiness = 100    
     
     def add_trick(self, new_trick):
         old_tricks = self.tricks
@@ -25,11 +25,11 @@ def get_properties(myClass):
     return propertyList
 
 
-def get_functions(myClass,builtin=True):
+def get_functions(myClass,builtin=False):
     functionsList = [attribute
                      for attribute in dir(myClass)
                      if callable(getattr(myClass, attribute))]
-    if builtin:
+    if not builtin:
         functionsList = [function
                          for function in functionsList
                          if not function.startswith("__")]
@@ -47,11 +47,13 @@ def get_implementation(function):
     import string
     implementation = i.getsource(function)
     implementation = implementation.split(":")[1]
-    arguments_inspection = i.getfullargspec(function)
-    arguments = arguments_inspection[0]
+    inspection = i.getfullargspec(function)
+    defaults = inspection.defaults
+    arguments = inspection[0]
     
     if arguments[0] == "self":
         isClassMethod = 0
+        arguments.remove("self")
     else:
         isClassMethod = 1
     
@@ -60,6 +62,10 @@ def get_implementation(function):
         translation = argument.translate(str.maketrans('','',string.punctuation))
         formal_spec += translation+","
         implementation = implementation.replace(argument, translation)
+    
+    if defaults is not None:
+        for i in range(len(defaults)):
+            implementation = "      if "+arguments[i]+" is None: "+arguments[i]+"="+defaults[i]+"\n"+implementation
         
     return implementation, formal_spec, isClassMethod
 
@@ -89,12 +95,21 @@ def send_iris(myClass, schema = ""):
         methodList = get_functions(myClass)
         for method in methodList:
             newMethod = irispy.classMethodObject("%Dictionary.MethodDefinition", "%New", className+":"+method)
-            newMethod.set("Language", "Python")
+            newMethod.set("Language", "python")
             implementation, formal_spec, isClassMethod =  get_implementation(getattr(myClass, method))
             newMethod.get("Implementation").invoke("Write", implementation)
             newMethod.set("ClassMethod", isClassMethod)
             newMethod.set("FormalSpec", formal_spec)
             newClass.get("Methods").invoke("Insert", newMethod)
+            
+        # define the %OnNew with default values for parameters
+        newMethod = irispy.classMethodObject("%Dictionary.MethodDefinition", "%New", className+":%OnNew")
+        newMethod.set("Language", "python")
+        implementation, formal_spec, isClassMethod =  get_implementation(getattr(myClass, "__init__"))
+        newMethod.get("Implementation").invoke("Write", implementation)
+        newMethod.set("ClassMethod", isClassMethod)
+        newMethod.set("FormalSpec", formal_spec)
+        newClass.get("Methods").invoke("Insert", newMethod)
         
         # saves class
         newClass.invoke("%Save")
@@ -108,9 +123,11 @@ def send_iris(myClass, schema = ""):
 # the definition should set default values for the __init__ method.
 # if schema is not specified, the default will be User
 # doesn't re-create if there's already a class with that name
+# all arguments must have a default
 
 # TODO: include annotations for arguments
 # TODO: set initial values for properties
 # TODO: create on new
+# TODO: adjust property type (lists)
 if __name__=="__main__":
     print(send_iris(Dog(), "pythonclass"))
