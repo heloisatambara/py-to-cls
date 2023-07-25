@@ -15,6 +15,8 @@ class Dog():
         name =  str(self.name)
         return name+" is happier now!"
     
+    
+    
 def get_properties(myClass):
     propertyList = [attribute
                     for attribute in dir(myClass)
@@ -42,26 +44,27 @@ def get_dataframe(myClass):
 
 def get_implementation(function):
     import inspect as i
+    import string
     implementation = i.getsource(function)
     implementation = implementation.split(":")[1]
-    return implementation
+    arguments_inspection = i.getfullargspec(function)
+    arguments = arguments_inspection[0]
+    
+    if arguments[0] == "self":
+        isClassMethod = 0
+    else:
+        isClassMethod = 1
+    
+    formal_spec = ""
+    for argument in arguments:
+        translation = argument.translate(str.maketrans('','',string.punctuation))
+        formal_spec += translation+","
+        implementation = implementation.replace(argument, translation)
+        
+    return implementation, formal_spec, isClassMethod
 
 
 def send_iris(myClass, schema = ""):
-    worked = True
-    try:
-        from sqlalchemy import create_engine 
-        dataFrame = get_dataframe(myClass)
-        engine = create_engine("iris://_system:SYS@localhost:1972/SAMPLE")
-        dataFrame.to_sql(myClass.__class__.__name__, con=engine, schema=schema, if_exists="replace")
-    except Exception as error:
-        worked = False
-        print(error)
-    
-    return worked
-
-
-def send_iris2(myClass, schema = ""):
     worked = True
     try:
         # connect to the instance
@@ -87,7 +90,10 @@ def send_iris2(myClass, schema = ""):
         for method in methodList:
             newMethod = irispy.classMethodObject("%Dictionary.MethodDefinition", "%New", className+":"+method)
             newMethod.set("Language", "Python")
-            newMethod.get("Implementation").invoke("Write", get_implementation(getattr(myClass, method)))
+            implementation, formal_spec, isClassMethod =  get_implementation(getattr(myClass, method))
+            newMethod.get("Implementation").invoke("Write", implementation)
+            newMethod.set("ClassMethod", isClassMethod)
+            newMethod.set("FormalSpec", formal_spec)
             newClass.get("Methods").invoke("Insert", newMethod)
         
         # saves class
@@ -101,7 +107,10 @@ def send_iris2(myClass, schema = ""):
 
 # the definition should set default values for the __init__ method.
 # if schema is not specified, the default will be User
+# doesn't re-create if there's already a class with that name
 
-# TODO: method / classmethod if self is an argument
+# TODO: include annotations for arguments
+# TODO: set initial values for properties
+# TODO: create on new
 if __name__=="__main__":
-    print(send_iris2(Dog(), "pythonclass"))
+    print(send_iris(Dog(), "pythonclass"))
