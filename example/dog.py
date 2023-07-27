@@ -60,14 +60,14 @@ def get_implementation(function):
     formal_spec = ""
     for argument in arguments:
         translation = argument.translate(str.maketrans('','',string.punctuation))
-        formal_spec += translation+","
+        formal_spec += translation+":%String,"
         implementation = implementation.replace(argument, translation)
     
     if defaults is not None:
         for i in range(len(defaults)):
-            implementation = "      if "+arguments[i]+" is None: "+arguments[i]+"="+defaults[i]+"\n"+implementation
+            implementation = "        if "+arguments[i]+" is None: "+arguments[i]+"='"+defaults[i]+"'\n"+implementation
         
-    return implementation, formal_spec, isClassMethod
+    return implementation, formal_spec[:-1], isClassMethod
 
 
 def send_iris(myClass, schema = ""):
@@ -100,16 +100,18 @@ def send_iris(myClass, schema = ""):
             newMethod.get("Implementation").invoke("Write", implementation)
             newMethod.set("ClassMethod", isClassMethod)
             newMethod.set("FormalSpec", formal_spec)
+            print(formal_spec)
             newClass.get("Methods").invoke("Insert", newMethod)
             
         # define the %OnNew with default values for parameters
-        newMethod = irispy.classMethodObject("%Dictionary.MethodDefinition", "%New", className+":%OnNew")
-        newMethod.set("Language", "python")
+        init = irispy.classMethodObject("%Dictionary.MethodDefinition", "%New", className+":%OnNew")
+        init.set("Language", "python")
         implementation, formal_spec, isClassMethod =  get_implementation(getattr(myClass, "__init__"))
-        newMethod.get("Implementation").invoke("Write", implementation)
-        newMethod.set("ClassMethod", isClassMethod)
-        newMethod.set("FormalSpec", formal_spec)
-        newClass.get("Methods").invoke("Insert", newMethod)
+        init.get("Implementation").invoke("Write", implementation+"        return True")
+        init.set("ClassMethod", isClassMethod)
+        init.set("FormalSpec", formal_spec)
+        init.set("ReturnType", "%Status")
+        newClass.get("Methods").invoke("Insert", init)
         
         # saves class
         newClass.invoke("%Save")
@@ -127,7 +129,8 @@ def send_iris(myClass, schema = ""):
 
 # TODO: include annotations for arguments
 # TODO: set initial values for properties
-# TODO: create on new
 # TODO: adjust property type (lists)
+# TODO: adjust trailing spaces for implementation
+# TODO: ver o que fazer com o __init__
 if __name__=="__main__":
     print(send_iris(Dog(), "pythonclass"))
