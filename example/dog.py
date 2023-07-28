@@ -6,9 +6,8 @@ class Dog():
         self.happiness = 100    
     
     def add_trick(self, new_trick):
-        old_tricks = self.tricks
         self.tricks.append(new_trick)
-        return new_trick not in old_tricks
+        return self.tricks
     
     def pet(self):
         self.happiness += 10
@@ -18,11 +17,24 @@ class Dog():
     
     
 def get_properties(myClass):
-    propertyList = [attribute
-                    for attribute in dir(myClass)
-                    if not callable(getattr(myClass, attribute))
-                    and not attribute.startswith("__")]
-    return propertyList
+    typeDict = {
+        "<class 'str'>": "%String", 
+        "<class 'int'>": "%Integer",
+        "<class 'float'>": "%Decimal"
+    }
+    
+    propertyList = []
+    typeList = []
+    for attribute in dir(myClass):
+        property = getattr(myClass, attribute)
+        if not attribute.startswith("__") and not callable(property):
+            propertyList.append(attribute)
+            if str(type(property)) in typeDict.keys():
+                typeList.append(typeDict[str(type(property))])
+            else:
+                typeList.append("%SYS.Python")
+            
+    return propertyList, typeList
 
 
 def get_functions(myClass,builtin=False):
@@ -70,6 +82,8 @@ def get_implementation(function):
     return implementation, formal_spec[:-1], isClassMethod
 
 
+
+
 def send_iris(myClass, schema = ""):
     worked = True
     try:
@@ -85,10 +99,10 @@ def send_iris(myClass, schema = ""):
         newClass.set("Super", "%Persistent")
         
         # add its properties
-        propertyList = get_properties(myClass)
-        for property in propertyList:
-            newProperty = irispy.classMethodObject("%Dictionary.PropertyDefinition", "%New", className+":"+property)
-            newProperty.set("Type", "%String")
+        propertyList, typeList = get_properties(myClass)
+        for i in range(len(propertyList)):
+            newProperty = irispy.classMethodObject("%Dictionary.PropertyDefinition", "%New", className+":"+propertyList[i])
+            newProperty.set("Type", typeList[i])
             newClass.get("Properties").invoke("Insert", newProperty)
     
         # add its methods
@@ -100,7 +114,6 @@ def send_iris(myClass, schema = ""):
             newMethod.get("Implementation").invoke("Write", implementation)
             newMethod.set("ClassMethod", isClassMethod)
             newMethod.set("FormalSpec", formal_spec)
-            print(formal_spec)
             newClass.get("Methods").invoke("Insert", newMethod)
             
         # define the %OnNew with default values for parameters
