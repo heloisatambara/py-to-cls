@@ -5,7 +5,7 @@ class Dog():
         self.breed = breed
         self.happiness = 100    
     
-    def add_trick(self, new_trick):
+    def add_trick(self, new_trick: str):
         self.tricks.append(new_trick)
         return self.tricks
     
@@ -14,15 +14,13 @@ class Dog():
         name =  str(self.name)
         return name+" is happier now!"
     
-    
-    
-def get_properties(myClass):
-    typeDict = {
+typeDict = {
         "<class 'str'>": "%String", 
         "<class 'int'>": "%Integer",
         "<class 'float'>": "%Decimal"
-    }
+    }   
     
+def get_properties(myClass):
     propertyList = []
     typeList = []
     for attribute in dir(myClass):
@@ -61,6 +59,7 @@ def get_implementation(function):
     implementation = implementation.split(":")[1]
     inspection = i.getfullargspec(function)
     defaults = inspection.defaults
+    annotation = inspection.annotations
     arguments = inspection[0]
     
     if arguments[0] == "self":
@@ -72,7 +71,10 @@ def get_implementation(function):
     formal_spec = ""
     for argument in arguments:
         translation = argument.translate(str.maketrans('','',string.punctuation))
-        formal_spec += translation+":%String,"
+        if argument in annotation.keys():
+            formal_spec += translation+":"+typeDict[str(annotation[argument])]
+        else:
+            formal_spec += translation+":%String,"
         implementation = implementation.replace(argument, translation)
     
     if defaults is not None:
@@ -141,9 +143,6 @@ def send_iris(myClass, schema = ""):
 # all arguments must have a default
 
 # TODO: include annotations for arguments
-# TODO: set initial values for properties
-# TODO: adjust property type (lists)
 # TODO: adjust trailing spaces for implementation
-# TODO: ver o que fazer com o __init__
 if __name__=="__main__":
     print(send_iris(Dog(), "pythonclass"))
