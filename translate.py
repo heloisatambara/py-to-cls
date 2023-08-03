@@ -1,19 +1,5 @@
-class Dog():
-    def __init__(self, name="unnamed", breed="undefined"):
-        self.name = name
-        self.tricks = []
-        self.breed = breed
-        self.happiness = 100    
-    
-    def add_trick(self, new_trick: str):
-        self.tricks.append(new_trick)
-        return self.tricks
-    
-    def pet(self):
-        self.happiness += 10
-        name =  str(self.name)
-        return name+" is happier now!"
-    
+import iris
+
 typeDict = {
         "<class 'str'>": "%String", 
         "<class 'int'>": "%Integer",
@@ -45,13 +31,6 @@ def get_functions(myClass,builtin=False):
                          for function in functionsList
                          if not function.startswith("__")]
     return functionsList
-
-    
-def get_dataframe(myClass):
-    import pandas as pd
-    dataFrame = pd.DataFrame(myClass.__dict__)
-    return dataFrame
-
 
 def get_implementation(function):
     import inspect as i
@@ -87,14 +66,11 @@ def get_implementation(function):
     return implementation, formal_spec[:-1], isClassMethod
 
 
-
-
-def send_iris(myClass, schema = ""):
+def send_iris(connectionString, user, password, myClass, schema = ""):
     worked = True
     try:
         # connect to the instance
-        import iris
-        connectionString, user, password = "localhost:1972/SAMPLE", "_system", "sys"
+        
         connection = iris.connect(connectionString, user, password)
         irispy = iris.createIRIS(connection)
         
@@ -149,4 +125,5 @@ def send_iris(myClass, schema = ""):
 # TODO: include annotations for arguments
 # TODO: adjust trailing spaces for implementation
 if __name__=="__main__":
-    print(send_iris(Dog(), "python"))
+    from .example.dog import Dog
+    print(send_iris("localhost:1972/SAMPLE", "_system", "sys", Dog(), "python"))
