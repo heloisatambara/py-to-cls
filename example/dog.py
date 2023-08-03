@@ -17,7 +17,8 @@ class Dog():
 typeDict = {
         "<class 'str'>": "%String", 
         "<class 'int'>": "%Integer",
-        "<class 'float'>": "%Decimal"
+        "<class 'float'>": "%Decimal",
+        "<class 'list'>": "%SYS.Python"
     }   
     
 def get_properties(myClass):
@@ -56,7 +57,7 @@ def get_implementation(function):
     import inspect as i
     import string
     implementation = i.getsource(function)
-    implementation = implementation.split(":")[1]
+    implementation = implementation.split("):")[1]
     inspection = i.getfullargspec(function)
     defaults = inspection.defaults
     annotation = inspection.annotations
@@ -72,10 +73,12 @@ def get_implementation(function):
     for argument in arguments:
         translation = argument.translate(str.maketrans('','',string.punctuation))
         if argument in annotation.keys():
-            formal_spec += translation+":"+typeDict[str(annotation[argument])]
+            formal_spec += translation+":"+typeDict[str(annotation[argument])]+","
         else:
             formal_spec += translation+":%String,"
+            
         implementation = implementation.replace(argument, translation)
+
     
     if defaults is not None:
         for i in range(len(defaults)):
@@ -117,6 +120,7 @@ def send_iris(myClass, schema = ""):
             newMethod.set("ClassMethod", isClassMethod)
             newMethod.set("FormalSpec", formal_spec)
             newClass.get("Methods").invoke("Insert", newMethod)
+
             
         # define the %OnNew with default values for parameters
         init = irispy.classMethodObject("%Dictionary.MethodDefinition", "%New", className+":%OnNew")
@@ -129,8 +133,9 @@ def send_iris(myClass, schema = ""):
         newClass.get("Methods").invoke("Insert", init)
         
         # saves class
-        newClass.invoke("%Save")
-        
+        sc = newClass.invoke("%Save")
+        if irispy.classMethodObject("%SYSTEM.Status", "IsError", sc):        
+            raise Exception(irispy.classMethodObject('%SYSTEM.Status', 'GetErrorText', sc))
     except Exception as error:
         worked = False
         print(error)
@@ -145,4 +150,4 @@ def send_iris(myClass, schema = ""):
 # TODO: include annotations for arguments
 # TODO: adjust trailing spaces for implementation
 if __name__=="__main__":
-    print(send_iris(Dog(), "pythonclass"))
+    print(send_iris(Dog(), "python"))
