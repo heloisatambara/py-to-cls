@@ -1,7 +1,7 @@
-# class Owner():
-#     def __init__(self, name="hooman", age=21):
-#         self.name=name
-#         self.age=age
+class Owner():
+    def __init__(self, name="hooman", age=21):
+        self.name=name
+        self.age=age
         
 class Dog():
     def __init__(self, name="unnamed", breed="undefined"):
@@ -9,7 +9,7 @@ class Dog():
         self.tricks = []
         self.breed = breed
         self.happiness = 100
-     #   self.owner = Owner()
+        self.owner = Owner()
     
     def add_trick(self, new_trick: str):
         self.tricks.append(new_trick)
@@ -33,6 +33,7 @@ typeDict = {
 def get_properties(myClass):
     properties = {}
     typeList = []
+    swizzled = {}
     for attribute in dir(myClass):
         property = getattr(myClass, attribute)
         if not attribute.startswith("__") and not callable(property):
@@ -40,6 +41,7 @@ def get_properties(myClass):
                 typeList.append(typeDict[str(type(property))])
             else:
                 typeList.append("%SYS.Python")
+                swizzled[attribute] = type(property)
             
             if type(property) is str:
                 property = '"'+property+'"'
@@ -48,7 +50,7 @@ def get_properties(myClass):
                 
             properties[attribute] = property
                    
-    return properties, typeList
+    return properties, typeList, swizzled
 
 
 def get_functions(myClass,builtin=False):
@@ -111,13 +113,10 @@ def send_iris(myClass, schema = ""):
         newClass.set("Super", "%Persistent")
         
         # add its properties
-        propertyDict, typeList = get_properties(myClass)
-        swizzled = {}
+        propertyDict, typeList, swizzled = get_properties(myClass)
         for i in range(len(propertyDict)):
             newProperty = irispy.classMethodObject("%Dictionary.PropertyDefinition", "%New", className+":"+list(propertyDict)[i])
             newProperty.set("Type", typeList[i])
-            if typeList[i] == "%SYS.Python":
-                swizzled[list(propertyDict)[i]] = typeList[i]
             newProperty.set("InitialExpression", list(propertyDict.values())[i])
             newClass.get("Properties").invoke("Insert", newProperty)
     
@@ -140,7 +139,7 @@ def send_iris(myClass, schema = ""):
             onNewMethod.get("Implementation").invoke("WriteLine", "    Set SC = $$$OK")
             onNewMethod.get("Implementation").invoke("Write", "\n    Try\n    {\n")
             for property in swizzled:
-                if swizzled[property] in dir(__builtins__):
+                if swizzled[property].__name__ in dir(__builtins__):
                     onNewMethod.get("Implementation").invoke("WriteLine", "        Set .."+property+" = ##class(%SYS.Python).Builtins()."+swizzled[property]+"()")
                 else:
                     onNewMethod.get("Implementation").invoke("WriteLine", "        Set .."+property+" = ##class(%SYS.Python).%New()")
