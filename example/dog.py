@@ -140,7 +140,7 @@ def send_iris(myClass, schema = ""):
             onNewMethod.get("Implementation").invoke("Write", "\n    Try\n    {\n")
             for property in swizzled:
                 if swizzled[property].__name__ in dir(__builtins__):
-                    onNewMethod.get("Implementation").invoke("WriteLine", "        Set .."+property+" = ##class(%SYS.Python).Builtins()."+swizzled[property]+"()")
+                    onNewMethod.get("Implementation").invoke("WriteLine", "        Set .."+property+" = ##class(%SYS.Python).Builtins()."+swizzled[property].__name__+"()")
                 else:
                     onNewMethod.get("Implementation").invoke("WriteLine", "        Set .."+property+" = ##class(%SYS.Python).%New()")
             
