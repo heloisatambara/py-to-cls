@@ -1,9 +1,15 @@
+# class Owner():
+#     def __init__(self, name="hooman", age=21):
+#         self.name=name
+#         self.age=age
+        
 class Dog():
     def __init__(self, name="unnamed", breed="undefined"):
         self.name = name
         self.tricks = []
         self.breed = breed
-        self.happiness = 100    
+        self.happiness = 100
+     #   self.owner = Owner()
     
     def add_trick(self, new_trick: str):
         self.tricks.append(new_trick)
@@ -19,8 +25,7 @@ class Dog():
 typeDict = {
         "<class 'str'>": "%String", 
         "<class 'int'>": "%Integer",
-        "<class 'float'>": "%Decimal",
-        "<class 'list'>": "%SYS.Python"
+        "<class 'float'>": "%Decimal"
     }   
     
     
@@ -38,6 +43,8 @@ def get_properties(myClass):
             
             if type(property) is str:
                 property = '"'+property+'"'
+            elif type(property) is not int and type(property) is not float:
+                property = '""'
                 
             properties[attribute] = property
                    
@@ -105,11 +112,13 @@ def send_iris(myClass, schema = ""):
         
         # add its properties
         propertyDict, typeList = get_properties(myClass)
+        swizzled = {}
         for i in range(len(propertyDict)):
             newProperty = irispy.classMethodObject("%Dictionary.PropertyDefinition", "%New", className+":"+list(propertyDict)[i])
             newProperty.set("Type", typeList[i])
-            if typeList[i] != "%SYS.Python":
-                newProperty.set("InitialExpression", list(propertyDict.values())[i])
+            if typeList[i] == "%SYS.Python":
+                swizzled[list(propertyDict)[i]] = typeList[i]
+            newProperty.set("InitialExpression", list(propertyDict.values())[i])
             newClass.get("Properties").invoke("Insert", newProperty)
     
         # add its methods
@@ -122,11 +131,30 @@ def send_iris(myClass, schema = ""):
             newMethod.set("ClassMethod", isClassMethod)
             newMethod.set("FormalSpec", formal_spec)
             newClass.get("Methods").invoke("Insert", newMethod)
-        
+            
+        # add %OnNew method when necessary
+        if len(swizzled)!=0:
+            onNewMethod = irispy.classMethodObject("%Dictionary.MethodDefinition", "%New", className+":"+"%OnNew")
+            onNewMethod.set("ClassMethod", 0)
+            onNewMethod.set("ReturnType", "%Status")
+            onNewMethod.get("Implementation").invoke("WriteLine", "    Set SC = $$$OK")
+            onNewMethod.get("Implementation").invoke("Write", "\n    Try\n    {\n")
+            for property in swizzled:
+                if swizzled[property] in dir(__builtins__):
+                    onNewMethod.get("Implementation").invoke("WriteLine", "        Set .."+property+" = ##class(%SYS.Python).Builtins()."+swizzled[property]+"()")
+                else:
+                    onNewMethod.get("Implementation").invoke("WriteLine", "        Set .."+property+" = ##class(%SYS.Python).%New()")
+            
+            onNewMethod.get("Implementation").invoke("Write", "\n    }\n    Catch Ex\n    {\n        Set SC = Ex.AsStatus()\n    }\n")
+            onNewMethod.get("Implementation").invoke("WriteLine", "    Quit SC")
+                    
+            newClass.get("Methods").invoke("Insert", onNewMethod)
+            
         # saves class
         sc = newClass.invoke("%Save")
         if irispy.classMethodObject("%SYSTEM.Status", "IsError", sc):        
             raise Exception(irispy.classMethodObject('%SYSTEM.Status', 'GetErrorText', sc))
+        
     except Exception as error:
         worked = False
         print(error)
