@@ -13,7 +13,6 @@ class Dog():
     
     def add_trick(self, new_trick: str):
         self.tricks.append(new_trick)
-        return self.tricks
     
     def pet(self):
         self.happiness += 10
