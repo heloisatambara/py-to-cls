@@ -163,7 +163,6 @@ def send_iris(myClass, schema = ""):
 # if schema is not specified, the default will be User
 # doesn't re-create if there's already a class with that name
 
-# TODO: include annotations for arguments
-# TODO: adjust trailing spaces for implementation
+# TODO: property as user defined class 
 if __name__=="__main__":
     print(send_iris(Dog(), "python"))
